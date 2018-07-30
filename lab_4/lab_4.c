@@ -19,7 +19,7 @@ PROCESS(lab4_process, "Lab 4 process");
 AUTOSTART_PROCESSES(&lab4_process);
 /*---------------------------------------------------------------------------*/
 static struct ctimer ct;
-static int cnt=0, corretos=0;
+static int cnt=0;
 static int values[10], pressed[10];
 
 static void setled_callback( void * ptrValor){
@@ -31,9 +31,8 @@ static void setled_callback( void * ptrValor){
     ctimer_restart(&ct);
 }
 
-static void gen_random_array(){
+static void gen_random_item(){
     int i;
-    random_init(123);
     for(i=0; i < 10; i++){}
         values[i] = random_rand()%2;//inicializa o array com 0 ou 1
         pressed[i]=2; //2 indica q nenhum botao foi pressionado
@@ -59,8 +58,10 @@ PROCESS_THREAD(lab4_process, ev, data)
 {
     static int i=0;
     PROCESS_BEGIN();
-    printf("Lab3\n");
+    printf("Lab4\n");
     SENSORS_ACTIVATE(button_sensor);
+    random_init(123);
+
     gen_random_array();
 
     ctimer_set(&ct, CLOCK_SECOND *3, setled_callback, NULL);
