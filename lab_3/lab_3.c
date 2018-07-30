@@ -12,6 +12,7 @@
 #include "dev/leds.h"
 #include "dev/button-sensor.h"
 #include "random.h" /* random_init e random_rand */
+#include "sys/clock.h"
 #include <stdio.h> /* For printf() */
 /*---------------------------------------------------------------------------*/
 PROCESS(lab3_process, "Lab 3 process");
@@ -24,6 +25,9 @@ static int values[10];
 static int pressed[10];
 
 static void setled_callback( void * ptrValor){
+
+    leds_off(LEDS_GREEN|LEDS_RED);
+    clock_delay_usec(100000);
     if( (values[cnt])==0){
         leds_on(LEDS_RED);
         leds_off(LEDS_GREEN);
@@ -34,7 +38,9 @@ static void setled_callback( void * ptrValor){
     }
     printf("%d:%d\n",cnt, values[cnt]);
     cnt++;
-    ctimer_restart(&ct);
+
+    if(cnt<10)
+        ctimer_restart(&ct);
 }
 
 static void gen_random_array(){
@@ -65,6 +71,7 @@ PROCESS_THREAD(lab3_process, ev, data)
 {
     static int i=0;
     PROCESS_BEGIN();
+    clock_init();
     printf("Lab3\n");
     SENSORS_ACTIVATE(button_sensor);
     gen_random_array();
@@ -75,9 +82,9 @@ PROCESS_THREAD(lab3_process, ev, data)
         PROCESS_YIELD();
         if(ev == sensors_event){
             if(data == &button_left_sensor)
-                pressed[cnt-1] = 1;
-            if(data == &button_right_sensor)
                 pressed[cnt-1] = 0;
+            if(data == &button_right_sensor)
+                pressed[cnt-1] = 1;
         }
     }
 
