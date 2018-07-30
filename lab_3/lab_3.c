@@ -18,14 +18,21 @@ PROCESS(lab3_process, "Lab 3 process");
 AUTOSTART_PROCESSES(&lab3_process);
 /*---------------------------------------------------------------------------*/
 static struct ctimer ct;
-static int cnt=0, corretos=0;
-static int values[10], pressed[10];
+static int cnt=0;
+static int corretos=0;
+static int values[10];
+static int pressed[10];
 
 static void setled_callback( void * ptrValor){
-    if( (values[cnt])==0)
+    if( (values[cnt])==0){
         leds_on(LEDS_RED);
-    else
+        leds_off(LEDS_GREEN);
+    }
+    else{
         leds_on(LEDS_GREEN);
+        leds_off(LEDS_RED);
+    }
+    printf("%d:%d\n",cnt, values[cnt]);
     cnt++;
     ctimer_restart(&ct);
 }
