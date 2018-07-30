@@ -33,7 +33,7 @@ static void setled_callback( void * ptrValor){
 static void gen_random_array(){
     int i;
     random_init(123);
-    for(i=0; i < 10; i++){}
+    for(i=0; i < 10; i++){
         values[i] = random_rand()%2;//inicializa o array com 0 ou 1
         pressed[i]=2; //2 indica q nenhum botao foi pressionado
     }
