@@ -1,40 +1,11 @@
 /*
- * Copyright (c) 2006, Swedish Institute of Computer Science.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the Institute nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This file is part of the Contiki operating system.
- *
- */
-
-/**
- * \file
- *         A very simple Contiki application showing how Contiki programs look
- * \author
- *         Adam Dunkels <adam@sics.se>
+ * Nesse exercicio, é gerado um array 'values' com valores aleatorios
+ * e o timer 'ct' é executado a cada 3 segundos e acende o led 
+ * correspondente. Na task, é lido os botões e armazenado o valor
+ * lido no array 'pressed'. Após dez leituras, os valores são 
+ * comparados na função 'check_result'. Os valores possiveis no array
+ * 'pressed' são 1 para o botão left, 0 para o botão right e 2 para
+ * nenhum botão pressionado.
  */
 
 #include "contiki.h"
@@ -43,45 +14,67 @@
 #include "random.h" /* random_init e random_rand */
 #include <stdio.h> /* For printf() */
 /*---------------------------------------------------------------------------*/
-PROCESS(lab1_process, "Lab 1 process");
-AUTOSTART_PROCESSES(&lab1_process);
+PROCESS(lab3_process, "Lab 3 process");
+AUTOSTART_PROCESSES(&lab3_process);
 /*---------------------------------------------------------------------------*/
 static struct ctimer ct;
+static int cnt=0, corretos=0;
+static int values[10], pressed[10];
 
-static void led_callback( void * ptrValor){
-    if( ((int)ptrValor)==LEDS_RED)
+static void setled_callback( void * ptrValor){
+    if( (values[cnt])==0)
         leds_on(LEDS_RED);
     else
         leds_on(LEDS_GREEN);
+    cnt++;
+    ctimer_restart(&ct);
 }
 
-static void gen_random_array(int *v){
+static void gen_random_array(){
     int i;
     random_init(123);
-    for(i=0; i < 10; i++)
-        v[i] = random_rand()%2;
+    for(i=0; i < 10; i++){}
+        values[i] = random_rand()%2;//inicializa o array com 0 ou 1
+        pressed[i]=2; //2 indica q nenhum botao foi pressionado
+    }
 }
 
-PROCESS_THREAD(lab1_process, ev, data)
+static void check_result(){
+    int i, corretos=0, timeout=0;
+
+    for(i=0; i < 10; i++ ){
+        if(pressed[i] == values[i])
+            corretos++;
+        if(pressed[i]==2)
+            timeout++;
+    }
+
+    printf("Resultado:\n");
+    printf("Corretos: %d\n",corretos);
+    printf("Timeout: %d\n", timeout);
+}
+
+PROCESS_THREAD(lab3_process, ev, data)
 {
-    static int i=0, v[10];
+    static int i=0;
     PROCESS_BEGIN();
     printf("Lab3\n");
     SENSORS_ACTIVATE(button_sensor);
-    gen_random_array(v);
+    gen_random_array();
 
-    ctimer_set(&ct, CLOCK_SECOND *2, led_callback, NULL);
-    leds_on(LEDS_GREEN);
-    while(i<10){
+    ctimer_set(&ct, CLOCK_SECOND *3, setled_callback, NULL);
+
+    while(cnt<10){
         PROCESS_YIELD();
         if(ev == sensors_event){
             if(data == &button_left_sensor)
-                ctimer_restart(&ct);
+                pressed[cnt-1] = 1;
             if(data == &button_right_sensor)
-                ctimer_stop(&ct);
+                pressed[cnt-1] = 0;
         }
-
     }
+
+    check_result();
 
     while(1)
         PROCESS_YIELD();
