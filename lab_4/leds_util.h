@@ -1,10 +1,15 @@
+#ifndef LEDS_UTIL_H
+#define LEDS_UTIL_H
+
 #include "dev/leds.h"
 
 typedef enum {
-    None,
     Red,
     Green,
+    None,
     Both
 } LedsState_t;
 
-static void acende_leds(LedsState_t state);
+void acende_led(LedsState_t state);
+
+#endif

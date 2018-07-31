@@ -1,6 +1,6 @@
 #include "leds_util.h"
 
-static void acende_leds(LedsState_t state){
+void acende_led(LedsState_t state){
     switch(state){
         case None:
             leds_off(LEDS_RED);

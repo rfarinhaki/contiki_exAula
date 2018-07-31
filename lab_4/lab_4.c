@@ -1,82 +1,131 @@
 /*
- * Nesse exercicio, é gerado um array 'values' com valores aleatorios
- * e o timer 'ct' é executado a cada 3 segundos e acende o led 
- * correspondente. Na task, é lido os botões e armazenado o valor
- * lido no array 'pressed'. Após dez leituras, os valores são 
- * comparados na função 'check_result'. Os valores possiveis no array
- * 'pressed' são 1 para o botão left, 0 para o botão right e 2 para
- * nenhum botão pressionado.
+ * Esse exercício funciona com uma maquina de estados. Num estado é apresentada a sequencia de leds,
+ * no outro estado são lidos os botoes e o outro estado é o estado de erro. No estado que a sequencia
+ * de leds é exibida, a cada iteracao, um item eh gerado e adicionado a lista até o maximo de 5 itens.
+ * No estado de leitura de botoes, a cada botão lido, é comparado com o valor presente no array values
+ * e caso o botao esteja certo, é incrementado um indice i e caso esteja errado, o estado de erro eh
+ * setado na variavel de estado. Como pedido, foi criado o arquivo leds_util.c que contem a funcao
+ * responsavel por manipular os leds. Foi criado em leds_util.h uma enum com os valores possiveis dos
+ * leds, que são led vermelho aceso, led verde aceso, ambos os leds acesos e nenhum led aceso. Quando
+ * o usuario vence, os leds piscam tres vezes. Para isso foi utilizado uma funcao de delay basica 
+ * presente no contik ao inves de um timer.
  */
 
 #include "contiki.h"
 #include "dev/leds.h"
-#include "leds_utils.h"
+#include "leds_util.h"
 #include "dev/button-sensor.h"
 #include "random.h" /* random_init e random_rand */
+#include "sys/clock.h"
 #include <stdio.h> /* For printf() */
 /*---------------------------------------------------------------------------*/
+
 PROCESS(lab4_process, "Lab 4 process");
+
 AUTOSTART_PROCESSES(&lab4_process);
 /*---------------------------------------------------------------------------*/
+typedef enum{
+    st_leds,
+    st_buttons,
+    st_error,
+    st_end
+}mstate_t;
+
 static struct ctimer ct;
-static int cnt=0;
-static int values[10], pressed[10];
+static int cnt=-1, values[5];
+static mstate_t mstate;
+
+
 
 static void setled_callback( void * ptrValor){
-    if( (values[cnt])==0)
-        leds_on(LEDS_RED);
+    static int i=0;
+    acende_led(None);
+    clock_delay(100000);
+    if( (values[i])==Red)
+        acende_led(Red);
     else
-        leds_on(LEDS_GREEN);
-    cnt++;
-    ctimer_restart(&ct);
+        acende_led(Green);
+
+
+    if(i<cnt){
+        ctimer_restart(&ct);
+        i++;
+    }
+    else{
+        i=0;
+        mstate = st_buttons;
+    }
 }
 
 static void gen_random_item(){
-    int i;
-    for(i=0; i < 10; i++){}
-        values[i] = random_rand()%2;//inicializa o array com 0 ou 1
-        pressed[i]=2; //2 indica q nenhum botao foi pressionado
-    }
-}
+    cnt++;
+    values[cnt] = random_rand()%2;//inicializa o array com 0 ou 1
 
-static void check_result(){
-    int i, corretos=0, timeout=0;
-
-    for(i=0; i < 10; i++ ){
-        if(pressed[i] == values[i])
-            corretos++;
-        if(pressed[i]==2)
-            timeout++;
-    }
-
-    printf("Resultado:\n");
-    printf("Corretos: %d\n",corretos);
-    printf("Timeout: %d\n", timeout);
 }
 
 PROCESS_THREAD(lab4_process, ev, data)
 {
-    static int i=0;
     PROCESS_BEGIN();
+
+    static int i=0;
+    mstate = st_leds;
+
     printf("Lab4\n");
     SENSORS_ACTIVATE(button_sensor);
     random_init(123);
 
-    gen_random_array();
 
-    ctimer_set(&ct, CLOCK_SECOND *3, setled_callback, NULL);
+    while(cnt<5){
 
-    while(cnt<10){
-        PROCESS_YIELD();
-        if(ev == sensors_event){
-            if(data == &button_left_sensor)
-                pressed[cnt-1] = 1;
-            if(data == &button_right_sensor)
-                pressed[cnt-1] = 0;
+
+        if(mstate == st_leds){
+            gen_random_item();
+            ctimer_set(&ct, CLOCK_SECOND * 1, setled_callback, NULL);
+            i = 0;
         }
+        PROCESS_YIELD();
+        if(mstate == st_buttons){
+            if(ev == sensors_event){
+                if(data == &button_left_sensor){
+                    if(values[i] == Red)
+                        i++;
+                    else
+                        mstate = st_error;
+                }
+                if(data == &button_right_sensor){
+                    if(values[i] == Green)
+                        i++;
+                    else
+                        mstate = st_error;
+                }
+                if(i == 5)
+                    break;
+
+                if(i>cnt)
+                    mstate=st_leds;
+
+            }
+        }
+
+        if(mstate == st_error){
+            break;
+        }
+
     }
 
-    check_result();
+    if(mstate != st_error){
+        printf("Voce ganhou!\n");
+        for(i=0; i < 3; i++){
+            acende_led(Both);
+            clock_wait(CLOCK_SECOND/2);
+            acende_led(None);
+            clock_wait(CLOCK_SECOND/2);
+        }
+    }
+    else{
+        printf("Voce perdeu!\nFez %d pontos\n", cnt-1);
+        acende_led(Both);
+    }
 
     while(1)
         PROCESS_YIELD();
